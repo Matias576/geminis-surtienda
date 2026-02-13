@@ -4,6 +4,18 @@ const MI_WHATSAPP = '5491162338933';
 let products = [];
 let cart = [];
 
+// Diccionario de Iconos para Categorías
+const CATEGORY_ICONS = {
+    "todo": "🏠",
+    "lenceria": "👙",
+    "bombachas": "👙",
+    "conjuntos": "✨",
+    "pijamas": "🌙",
+    "ofertas": "🔥",
+    "medias": "🧦",
+    "default": "📦"
+};
+
 async function loadProducts() {
     try {
         const response = await fetch(SHEET_URL);
@@ -105,81 +117,76 @@ function moveSlider(btn, direction) {
     container.scrollBy({ left: direction * scrollAmount, behavior: 'smooth' });
 }
 
-// --- FUNCIÓN DE DETALLE ACTUALIZADA CON ZOOM, MINIATURAS Y COMPARTIR ---
+// --- DETALLE DE PRODUCTO ---
 function openProductDetail(id) {
     const product = products.find(p => p.id === id);
     if (!product) return;
 
+    const modal = document.getElementById('product-detail-modal');
     document.getElementById('detail-title').innerText = product.title;
     document.getElementById('detail-price').innerText = `$${product.price}`;
     document.getElementById('detail-category').innerText = product.category;
     document.getElementById('detail-description').innerText = product.descripcion || 'Sin descripción disponible.';
     
+    const modalContent = modal.querySelector('.modal-content') || modal.querySelector('.detail-content');
+    if(modalContent) modalContent.scrollTop = 0;
+
     const fotos = product.image.split(',').map(img => img.trim()).filter(img => img !== "");
     const container = document.getElementById('detail-images-container');
     
-    // Inyectar HTML para imagen principal (con zoom) y miniaturas
     container.innerHTML = `
         <div class="zoom-wrapper" id="zoom-container">
             <img src="${fotos[0]}" class="detail-main-img" id="zoom-img">
         </div>
         <div class="thumbnail-container">
             ${fotos.map((f, index) => `
-                <img src="${f}" 
-                     class="thumb-img ${index === 0 ? 'active' : ''}" 
-                     onclick="changeDetailImage(this, '${f}')"
-                     onerror="this.src='https://via.placeholder.com/60x60?text=Sin+Imagen'">
+                <img src="${f}" class="thumb-img ${index === 0 ? 'active' : ''}" onclick="changeDetailImage(this, '${f}')">
             `).join('')}
         </div>
     `;
 
+    // Lógica de Zoom
     const zoomContainer = document.getElementById('zoom-container');
     const img = document.getElementById('zoom-img');
+    if (window.innerWidth > 768) {
+        zoomContainer.onmousemove = (e) => {
+            const rect = zoomContainer.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            img.style.transformOrigin = `${(x / rect.width) * 100}% ${(y / rect.height) * 100}%`;
+            img.style.transform = "scale(2)";
+        };
+        zoomContainer.onmouseleave = () => { img.style.transform = "scale(1)"; };
+    }
 
-    // Lógica de Zoom
-    zoomContainer.onmousemove = (e) => {
-        const rect = zoomContainer.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        img.style.transformOrigin = `${(x / rect.width) * 100}% ${(y / rect.height) * 100}%`;
-        img.style.transform = "scale(2.5)";
-    };
-
-    zoomContainer.onmouseleave = () => {
-        img.style.transform = "scale(1)";
-        img.style.transformOrigin = "center center";
-    };
-
-    // Agregar botones: "Agregar al pedido" y "Compartir"
+    // Botones de Acción
     const actionContainer = document.getElementById('detail-actions');
     actionContainer.innerHTML = `
-        <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 15px;">
-            <button class="btn-whatsapp" id="btn-add-detail">🛒 Agregar al pedido</button>
-            <button class="btn-share" id="btn-share-detail" style="background-color: #3498db; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer;">📤 Compartir Producto</button>
+        <div class="detail-actions-grid">
+            <button class="btn-add-detail" id="btn-add-detail">🛒 Agregar al Carrito</button>
+            <button class="btn-consultar" id="btn-consult-detail">💬 Consultar por WhatsApp</button>
+            <button class="btn-share-detail" id="btn-share-detail">📤 Compartir Producto</button>
         </div>
     `;
     
-    document.getElementById('btn-add-detail').onclick = () => {
-        addToCart(product.id);
-        closeProductDetail();
-        toggleCart();
+    document.getElementById('btn-add-detail').onclick = () => { addToCart(product.id); closeProductDetail(); toggleCart(); };
+    document.getElementById('btn-consult-detail').onclick = () => {
+        const mensaje = `Hola! Me interesa este producto de tu web:\n*${product.title}*\nPrecio: $${product.price}\n¿Tienen stock?`;
+        window.open(`https://wa.me/${MI_WHATSAPP}?text=${encodeURIComponent(mensaje)}`, '_blank');
     };
-
-    // Lógica de Compartir
     document.getElementById('btn-share-detail').onclick = () => {
-        const shareText = `¡Mira este producto en Geminis SurTienda!\n\n*${product.title}*\nPrecio: $${product.price}\n\nVer catálogo: ${window.location.href}`;
+        const shareText = `Mira este producto en Geminis SurTienda: *${product.title}* - $${product.price}`;
         if (navigator.share) {
-            navigator.share({ title: product.title, text: shareText, url: window.location.href }).catch(console.error);
+            navigator.share({ title: product.title, text: shareText, url: window.location.href });
         } else {
-            window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
+            window.open(`https://wa.me/?text=${encodeURIComponent(shareText + " " + window.location.href)}`, '_blank');
         }
     };
 
-    document.getElementById('product-detail-modal').classList.remove('hidden');
+    modal.classList.remove('hidden');
     document.body.style.overflow = 'hidden'; 
 }
 
-// Función para cambiar imagen al clickear miniaturas
 function changeDetailImage(thumb, src) {
     document.getElementById('zoom-img').src = src;
     document.querySelectorAll('.thumb-img').forEach(t => t.classList.remove('active'));
@@ -191,157 +198,162 @@ function closeProductDetail() {
     document.body.style.overflow = 'auto';
 }
 
+// --- FILTRADO Y CATEGORÍAS ---
+function filterProducts(category, btnElement) {
+    const buttons = document.querySelectorAll('.category-btn');
+    buttons.forEach(btn => btn.classList.remove('active'));
+    if (btnElement) btnElement.classList.add('active');
+
+    if (category === 'todo') renderProducts(products);
+    else {
+        const filtered = products.filter(p => p.category?.toLowerCase().trim() === category.toLowerCase().trim());
+        renderProducts(filtered);
+    }
+}
+
+// --- MODO OSCURO INTELIGENTE ---
+function applyTheme(theme) {
+    const themeIcon = document.getElementById('theme-icon');
+    if (theme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        if (themeIcon) themeIcon.innerText = '☀️';
+    } else {
+        document.documentElement.removeAttribute('data-theme');
+        if (themeIcon) themeIcon.innerText = '🌙';
+    }
+}
+
+// --- INICIALIZACIÓN ---
+document.addEventListener('DOMContentLoaded', () => {
+    loadProducts();
+
+    // 1. Manejo del Tema (Automático/Manual)
+    const savedTheme = localStorage.getItem('theme');
+    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (savedTheme) applyTheme(savedTheme);
+    else if (systemPrefersDark) applyTheme('dark');
+
+    const btnTheme = document.getElementById('dark-mode-toggle');
+    if(btnTheme) {
+        btnTheme.addEventListener('click', () => {
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const newTheme = isDark ? 'light' : 'dark';
+            applyTheme(newTheme);
+            localStorage.setItem('theme', newTheme);
+        });
+    }
+
+    // 2. Bienvenida
+    const welcomeModal = document.getElementById('welcome-modal');
+    if (!sessionStorage.getItem('welcomeShown')) {
+        setTimeout(() => {
+            if (welcomeModal) {
+                welcomeModal.classList.remove('hidden');
+                welcomeModal.style.display = 'flex';
+            }
+        }, 800);
+    }
+
+    // 3. Estilos Dinámicos (Categorías, Cierre Móvil, Consultar)
+    const style = document.createElement('style');
+    style.innerHTML = `
+        .category-btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 22px; font-size: 1.1rem; font-weight: bold; border-radius: 25px; cursor: pointer; transition: 0.3s; background: var(--card-bg); color: var(--text-color); border: 2px solid var(--border-color); }
+        .category-btn.active { background: #000; color: #fff; border-color: var(--accent-color); transform: scale(1.05); }
+        [data-theme="dark"] .category-btn.active { background: #fff; color: #000; }
+        
+        .detail-actions-grid { display: grid; gap: 10px; margin-top: 20px; }
+        .btn-add-detail { background: var(--header-bg); color: #fff; padding: 15px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; }
+        .btn-consultar { background: #25D366; color: #fff; padding: 15px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; }
+        .btn-share-detail { background: #3498db; color: #fff; padding: 15px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; }
+
+        .close-modal-fixed { position: sticky; top: 0; align-self: flex-end; background: #000; color: #fff; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; z-index: 2000; cursor: pointer; border: 2px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.3); margin-bottom: -40px; margin-right: -10px; }
+        [data-theme="dark"] #welcome-modal .welcome-content { background: #1a1a1a; color: #fff; border: 1px solid #333; }
+    `;
+    document.head.appendChild(style);
+
+    // 4. Inyectar Iconos en botones
+    document.querySelectorAll('.category-btn').forEach(btn => {
+        const text = btn.innerText.toLowerCase().trim();
+        const icon = CATEGORY_ICONS[text] || CATEGORY_ICONS["default"];
+        btn.innerHTML = `<span>${icon}</span> ${btn.innerText}`;
+    });
+
+    // 5. Botón de Cierre Fijo para Detalle
+    const detailContent = document.querySelector('.detail-content');
+    if (detailContent) {
+        const closeBtn = document.createElement('div');
+        closeBtn.className = 'close-modal-fixed';
+        closeBtn.innerHTML = '&times;';
+        closeBtn.onclick = closeProductDetail;
+        detailContent.prepend(closeBtn);
+    }
+});
+
+// --- FUNCIONES RESTANTES (CARRITO Y OTROS) ---
 function addToCart(id, event) {
     const product = products.find(p => p.id === id);
     if(product) {
         const selectEl = document.getElementById(`select-${id}`);
         const varianteSeleccionada = selectEl ? selectEl.value : null;
-        const productoParaCarrito = {
-            ...product,
-            tituloConVariante: varianteSeleccionada ? `${product.title} (${varianteSeleccionada})` : product.title
-        };
-        cart.push(productoParaCarrito);
+        const prod = {...product, tituloConVariante: varianteSeleccionada ? `${product.title} (${varianteSeleccionada})` : product.title};
+        cart.push(prod);
         updateCartUI();
         if (event && event.target) {
-            const btn = event.target;
-            const originalText = btn.innerText;
-            btn.innerText = "✅ Agregado";
-            btn.style.pointerEvents = "none";
-            setTimeout(() => {
-                btn.innerText = originalText;
-                btn.style.pointerEvents = "auto";
-            }, 1000);
+            const b = event.target; b.innerText = "✅ Agregado";
+            setTimeout(() => b.innerText = "Agregar al Carrito", 1000);
         }
     }
 }
 
 function updateCartUI() {
-    const cartCountEl = document.getElementById('cart-count');
-    if(cartCountEl) cartCountEl.innerText = cart.length;
-    const cartItems = document.getElementById('cart-items');
-    if(!cartItems) return;
+    const count = document.getElementById('cart-count');
+    if(count) count.innerText = cart.length;
+    const items = document.getElementById('cart-items');
+    if(!items) return;
     let total = 0;
-    cartItems.innerHTML = '';
-    cart.forEach((item) => {
-        const precioLimpio = parseFloat(item.price.toString().replace(/[$.]/g, '').replace(',', '.')) || 0;
-        total += precioLimpio;
-        const li = document.createElement('li');
-        li.style.display = "flex"; li.style.justifyContent = "space-between"; li.style.marginBottom = "10px";
-        li.innerHTML = `<span>${item.tituloConVariante}</span><span>$${precioLimpio.toLocaleString('es-AR')}</span>`;
-        cartItems.appendChild(li);
-    });
+    items.innerHTML = cart.map(item => {
+        const p = parseFloat(item.price.toString().replace(/[$.]/g, '').replace(',', '.')) || 0;
+        total += p;
+        return `<li style="display:flex;justify-content:space-between;margin-bottom:10px">
+            <span>${item.tituloConVariante}</span><span>$${p.toLocaleString('es-AR')}</span>
+        </li>`;
+    }).join('');
     const totalEl = document.getElementById('cart-total');
     if(totalEl) totalEl.innerText = total.toLocaleString('es-AR');
 }
 
-function toggleCart() {
-    const modal = document.getElementById('cart-modal');
-    if(modal) modal.classList.toggle('hidden');
-}
-
-function emptyCart() {
-    if (cart.length === 0) return;
-    if (confirm("¿Estás seguro de que quieres vaciar el carrito?")) {
-        cart = []; updateCartUI();
-        setTimeout(() => toggleCart(), 500);
-    }
-}
+function toggleCart() { document.getElementById('cart-modal').classList.toggle('hidden'); }
 
 function checkout() {
-    if(cart.length === 0) return alert("El carrito está vacío");
-    let message = "Hola! Te envío mi pedido desde la web de *Geminis SurTienda*:%0A%0A";
-    let totalAcumulado = 0;
-    cart.forEach(item => {
-        const precio = parseFloat(item.price.toString().replace(/[$.]/g, '').replace(',', '.')) || 0;
-        message += `• ${item.tituloConVariante} - $${precio.toLocaleString('es-AR')}%0A`;
-        totalAcumulado += precio;
+    if(cart.length === 0) return;
+    let msg = "Hola! Mi pedido de *Geminis SurTienda*:%0A%0A";
+    let t = 0;
+    cart.forEach(i => {
+        const p = parseFloat(i.price.toString().replace(/[$.]/g, '').replace(',', '.')) || 0;
+        msg += `• ${i.tituloConVariante} - $${p.toLocaleString('es-AR')}%0A`;
+        t += p;
     });
-    message += `%0A*Total: $${totalAcumulado.toLocaleString('es-AR')}*%0A%0ACoordinamos el pago?`;
-    window.open(`https://wa.me/${MI_WHATSAPP}?text=${message}`, '_blank');
+    msg += `%0A*Total: $${t.toLocaleString('es-AR')}*`;
+    window.open(`https://wa.me/${MI_WHATSAPP}?text=${msg}`, '_blank');
 }
-
-function filterProducts(category) {
-    if (category === 'todo') {
-        renderProducts(products);
-    } else {
-        const filtered = products.filter(p => p.category && p.category.toLowerCase().trim() === category.toLowerCase().trim());
-        renderProducts(filtered);
-    }
-}
-
-function searchProducts() {
-    const searchInput = document.getElementById('product-search');
-    const searchTerm = searchInput.value.toLowerCase();
-    const filtered = products.filter(product => {
-        const title = (product.title || "").toLowerCase();
-        const category = (product.category || "").toLowerCase();
-        const desc = (product.descripcion || "").toLowerCase();
-        return title.includes(searchTerm) || category.includes(searchTerm) || desc.includes(searchTerm);
-    });
-    renderProducts(filtered);
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    loadProducts();
-    const contactForm = document.getElementById('whatsapp-form');
-    if (contactForm) {
-        contactForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const nombre = document.getElementById('nombre-contacto').value;
-            const asunto = document.getElementById('asunto-contacto').value;
-            const mensaje = document.getElementById('mensaje-contacto').value;
-            const textoWhatsApp = `Hola! Vengo de la web de *Geminis SurTienda*. Mi nombre es *${nombre}*.%0A%0A*Consulta:* ${asunto}%0A*Mensaje:* ${mensaje}`;
-            window.open(`https://wa.me/${MI_WHATSAPP}?text=${textoWhatsApp}`, '_blank');
-        });
-    }
-
-    const btnTheme = document.getElementById('dark-mode-toggle');
-    const themeIcon = document.getElementById('theme-icon');
-    if (localStorage.getItem('theme') === 'dark') {
-        document.documentElement.setAttribute('data-theme', 'dark');
-        if(themeIcon) themeIcon.innerText = '☀️';
-    }
-    if(btnTheme) {
-        btnTheme.addEventListener('click', () => {
-            let isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-            if (isDark) {
-                document.documentElement.removeAttribute('data-theme');
-                if(themeIcon) themeIcon.innerText = '🌙';
-                localStorage.setItem('theme', 'light');
-            } else {
-                document.documentElement.setAttribute('data-theme', 'dark');
-                if(themeIcon) themeIcon.innerText = '☀️';
-                localStorage.setItem('theme', 'dark');
-            }
-        });
-    }
-
-    if (!sessionStorage.getItem('welcomeShown')) {
-        setTimeout(() => {
-            const modal = document.getElementById('welcome-modal');
-            if(modal) modal.classList.remove('hidden');
-        }, 1500);
-    }
-});
 
 function closeWelcome() {
-    const modal = document.getElementById('welcome-modal');
-    if(modal) modal.classList.add('hidden');
+    const m = document.getElementById('welcome-modal');
+    if(m) { m.classList.add('hidden'); m.style.display = 'none'; }
     sessionStorage.setItem('welcomeShown', 'true');
 }
 
-function scrollToTop() {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+function searchProducts() {
+    const term = document.getElementById('product-search').value.toLowerCase();
+    const filtered = products.filter(p => 
+        p.title.toLowerCase().includes(term) || 
+        p.category.toLowerCase().includes(term)
+    );
+    renderProducts(filtered);
 }
 
-window.onscroll = function() {
-    const btn = document.getElementById("btn-scroll-top");
-    if (btn) {
-        if (document.body.scrollTop > 300 || document.documentElement.scrollTop > 300) {
-            btn.classList.remove("hidden");
-            btn.style.display = "flex";
-        } else {
-            btn.classList.add("hidden");
-        }
-    }
+function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
+window.onscroll = () => {
+    const b = document.getElementById("btn-scroll-top");
+    if(b) b.style.display = (window.scrollY > 300) ? "flex" : "none";
 };
