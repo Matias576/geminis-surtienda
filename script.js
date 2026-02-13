@@ -4,7 +4,6 @@ const MI_WHATSAPP = '5491162338933';
 let products = [];
 let cart = [];
 
-// Diccionario de Iconos para Categorías
 const CATEGORY_ICONS = {
     "todo": "🏠",
     "lenceria": "👙",
@@ -117,7 +116,7 @@ function moveSlider(btn, direction) {
     container.scrollBy({ left: direction * scrollAmount, behavior: 'smooth' });
 }
 
-// --- DETALLE DE PRODUCTO ---
+// --- DETALLE DE PRODUCTO CON ZOOM CORREGIDO ---
 function openProductDetail(id) {
     const product = products.find(p => p.id === id);
     if (!product) return;
@@ -135,8 +134,8 @@ function openProductDetail(id) {
     const container = document.getElementById('detail-images-container');
     
     container.innerHTML = `
-        <div class="zoom-wrapper" id="zoom-container">
-            <img src="${fotos[0]}" class="detail-main-img" id="zoom-img">
+        <div class="zoom-wrapper" id="zoom-container" style="overflow: hidden; position: relative; cursor: zoom-in;">
+            <img src="${fotos[0]}" class="detail-main-img" id="zoom-img" style="width: 100%; transition: transform 0.2s ease-out; transform-origin: center;">
         </div>
         <div class="thumbnail-container">
             ${fotos.map((f, index) => `
@@ -145,21 +144,24 @@ function openProductDetail(id) {
         </div>
     `;
 
-    // Lógica de Zoom
+    // ACTIVACIÓN DEL ZOOM
     const zoomContainer = document.getElementById('zoom-container');
-    const img = document.getElementById('zoom-img');
+    const zoomImg = document.getElementById('zoom-img');
+
     if (window.innerWidth > 768) {
-        zoomContainer.onmousemove = (e) => {
-            const rect = zoomContainer.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            img.style.transformOrigin = `${(x / rect.width) * 100}% ${(y / rect.height) * 100}%`;
-            img.style.transform = "scale(2)";
-        };
-        zoomContainer.onmouseleave = () => { img.style.transform = "scale(1)"; };
+        zoomContainer.addEventListener('mousemove', (e) => {
+            const { left, top, width, height } = zoomContainer.getBoundingClientRect();
+            const x = ((e.pageX - left - window.scrollX) / width) * 100;
+            const y = ((e.pageY - top - window.scrollY) / height) * 100;
+            zoomImg.style.transformOrigin = `${x}% ${y}%`;
+            zoomImg.style.transform = "scale(2.5)";
+        });
+
+        zoomContainer.addEventListener('mouseleave', () => {
+            zoomImg.style.transform = "scale(1)";
+        });
     }
 
-    // Botones de Acción
     const actionContainer = document.getElementById('detail-actions');
     actionContainer.innerHTML = `
         <div class="detail-actions-grid">
@@ -188,7 +190,8 @@ function openProductDetail(id) {
 }
 
 function changeDetailImage(thumb, src) {
-    document.getElementById('zoom-img').src = src;
+    const mainImg = document.getElementById('zoom-img');
+    mainImg.src = src;
     document.querySelectorAll('.thumb-img').forEach(t => t.classList.remove('active'));
     thumb.classList.add('active');
 }
@@ -198,7 +201,6 @@ function closeProductDetail() {
     document.body.style.overflow = 'auto';
 }
 
-// --- FILTRADO Y CATEGORÍAS ---
 function filterProducts(category, btnElement) {
     const buttons = document.querySelectorAll('.category-btn');
     buttons.forEach(btn => btn.classList.remove('active'));
@@ -211,7 +213,6 @@ function filterProducts(category, btnElement) {
     }
 }
 
-// --- MODO OSCURO INTELIGENTE ---
 function applyTheme(theme) {
     const themeIcon = document.getElementById('theme-icon');
     if (theme === 'dark') {
@@ -223,11 +224,9 @@ function applyTheme(theme) {
     }
 }
 
-// --- INICIALIZACIÓN ---
 document.addEventListener('DOMContentLoaded', () => {
     loadProducts();
 
-    // 1. Manejo del Tema (Automático/Manual)
     const savedTheme = localStorage.getItem('theme');
     const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     if (savedTheme) applyTheme(savedTheme);
@@ -243,7 +242,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 2. Bienvenida
     const welcomeModal = document.getElementById('welcome-modal');
     if (!sessionStorage.getItem('welcomeShown')) {
         setTimeout(() => {
@@ -254,7 +252,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 800);
     }
 
-    // 3. Estilos Dinámicos (Categorías, Cierre Móvil, Consultar)
     const style = document.createElement('style');
     style.innerHTML = `
         .category-btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 22px; font-size: 1.1rem; font-weight: bold; border-radius: 25px; cursor: pointer; transition: 0.3s; background: var(--card-bg); color: var(--text-color); border: 2px solid var(--border-color); }
@@ -265,20 +262,21 @@ document.addEventListener('DOMContentLoaded', () => {
         .btn-add-detail { background: var(--header-bg); color: #fff; padding: 15px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; }
         .btn-consultar { background: #25D366; color: #fff; padding: 15px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; }
         .btn-share-detail { background: #3498db; color: #fff; padding: 15px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; }
+        
+        .btn-empty { background-color: #e74c3c; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 15px; width: 100%; transition: 0.3s; }
+        .btn-empty:hover { background-color: #c0392b; }
 
         .close-modal-fixed { position: sticky; top: 0; align-self: flex-end; background: #000; color: #fff; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; z-index: 2000; cursor: pointer; border: 2px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.3); margin-bottom: -40px; margin-right: -10px; }
         [data-theme="dark"] #welcome-modal .welcome-content { background: #1a1a1a; color: #fff; border: 1px solid #333; }
     `;
     document.head.appendChild(style);
 
-    // 4. Inyectar Iconos en botones
     document.querySelectorAll('.category-btn').forEach(btn => {
         const text = btn.innerText.toLowerCase().trim();
         const icon = CATEGORY_ICONS[text] || CATEGORY_ICONS["default"];
         btn.innerHTML = `<span>${icon}</span> ${btn.innerText}`;
     });
 
-    // 5. Botón de Cierre Fijo para Detalle
     const detailContent = document.querySelector('.detail-content');
     if (detailContent) {
         const closeBtn = document.createElement('div');
@@ -289,7 +287,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// --- FUNCIONES RESTANTES (CARRITO Y OTROS) ---
 function addToCart(id, event) {
     const product = products.find(p => p.id === id);
     if(product) {
@@ -323,6 +320,18 @@ function updateCartUI() {
 }
 
 function toggleCart() { document.getElementById('cart-modal').classList.toggle('hidden'); }
+
+function emptyCart() {
+    if (cart.length === 0) {
+        alert("El carrito ya está vacío");
+        return;
+    }
+    if (confirm("¿Estás seguro de que quieres vaciar todo el carrito?")) {
+        cart = [];
+        updateCartUI();
+        setTimeout(() => toggleCart(), 500);
+    }
+}
 
 function checkout() {
     if(cart.length === 0) return;
