@@ -77,13 +77,13 @@ function renderProducts(list) {
 }
 
 // --- VENTANA EMERGENTE (DETALLE MEJORADO) ---
+// --- VENTANA EMERGENTE (DETALLE CORREGIDO) ---
 function openProductDetail(id) {
     const product = products.find(p => p.id === id);
     if (!product) return;
 
     const modal = document.getElementById('product-detail-modal');
 
-    // AQUÍ AGREGO LOS TALLES/VARIANTES PARA EL CELULAR EN EL MODAL
     let variantesHTMLModal = '';
     if (product.variantes) {
         const opciones = product.variantes.split(',');
@@ -116,37 +116,39 @@ function openProductDetail(id) {
             </div>
         </div>`;
 
-    // --- MODIFICACIÓN: Mostrar imagen principal y miniaturas ---
+    // --- LÓGICA DE IMÁGENES (CORRECCIÓN AQUÍ) ---
     const fotos = product.image.split(',').map(img => img.trim());
-    // Imagen principal
-    let mainImgHTML = `<img id="main-detail-img" src="${fotos[0]}" class="detail-main-img" onerror="this.src='https://via.placeholder.com/300'">`;
     
-    // Miniaturas (solo se muestran si hay más de 1 imagen)
-    let thumbsHTML = '';
+    // 1. Imagen principal
+    let imagesHTML = `<img id="main-detail-img" src="${fotos[0]}" class="detail-main-img" onerror="this.src='https://via.placeholder.com/300'">`;
+    
+    // 2. Galería de miniaturas (si hay más de una foto)
     if (fotos.length > 1) {
-        thumbsHTML = `<div class="thumbnail-container">` +
-            fotos.map((img, index) => 
-                `<img src="${img}" class="thumb-img ${index === 0 ? 'active' : ''}" onclick="changeModalImage('${img}', this)" onerror="this.src='https://via.placeholder.com/300'">`
-            ).join('') + 
-        `</div>`;
+        imagesHTML += `<div class="thumbnail-container" style="display:flex; gap:10px; margin-top:10px; overflow-x:auto;">`;
+        fotos.forEach((img, index) => {
+            imagesHTML += `<img src="${img}" class="thumb-img ${index === 0 ? 'active' : ''}" 
+                           onclick="changeModalImage('${img}', this)" 
+                           style="width:60px; height:60px; object-fit:cover; border-radius:8px; cursor:pointer; border:2px solid ${index === 0 ? 'var(--accent-color)' : 'transparent'}">`;
+        });
+        imagesHTML += `</div>`;
     }
 
-    // Inyectamos todo en el contenedor
-    document.getElementById('detail-images-container').innerHTML = mainImgHTML + thumbsHTML;
+    document.getElementById('detail-images-container').innerHTML = imagesHTML;
 
     modal.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
     window.history.pushState({ modalOpen: true }, "");
 }
 
-// NUEVA FUNCIÓN: Permite cambiar la imagen principal al hacer clic en las miniaturas
+// NUEVA FUNCIÓN NECESARIA: Para cambiar la foto principal al tocar una miniatura
 window.changeModalImage = function(src, element) {
-    document.getElementById('main-detail-img').src = src;
+    const mainImg = document.getElementById('main-detail-img');
+    if(mainImg) mainImg.src = src;
     
-    // Actualiza el borde de la miniatura seleccionada
-    const thumbs = element.parentElement.querySelectorAll('.thumb-img');
-    thumbs.forEach(thumb => thumb.classList.remove('active'));
-    element.classList.add('active');
+    // Actualizar bordes de miniaturas
+    const thumbs = element.parentElement.querySelectorAll('img');
+    thumbs.forEach(t => t.style.borderColor = 'transparent');
+    element.style.borderColor = 'var(--accent-color)';
 };
 
 function closeProductDetail() {
