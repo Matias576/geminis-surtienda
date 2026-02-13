@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Geminis SurTienda | Catálogo Oficial</title>
-    <link rel="icon" type="image/png" href="https://i.postimg.cc/FK8g728L/1000721739.jpg">
-    <link rel="apple-touch-icon" href="https://i.postimg.cc/FK8g728L/1000721739.jpg">
+    <link rel="icon" type="image/png" href="https://i.postimg.cc/4yG5xv5m/Captura-de-pantalla-2026-02-13-005547.png">
+    <link rel="apple-touch-icon" href="https://i.postimg.cc/4yG5xv5m/Captura-de-pantalla-2026-02-13-005547.png">
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 </head>
@@ -63,6 +63,26 @@
             </div>
             <button class="btn-whatsapp" onclick="checkout()">Enviar pedido por WhatsApp</button>
             <button class="btn-close" onclick="toggleCart()">Seguir viendo</button>
+        </div>
+    </div>
+
+    <div id="product-detail-modal" class="hidden">
+        <div class="detail-content">
+            <button class="close-detail" onclick="closeProductDetail()">&times;</button>
+            <div class="detail-grid">
+                <div class="detail-images" id="detail-images-container"></div>
+                <div class="detail-info">
+                    <p class="detail-category" id="detail-category"></p>
+                    <h2 id="detail-title"></h2>
+                    <p class="detail-price" id="detail-price"></p>
+                    <div class="detail-description-box">
+                        <h4>Descripción:</h4>
+                        <p id="detail-description"></p>
+                    </div>
+                    <div id="detail-actions">
+                        </div>
+                </div>
+            </div>
         </div>
     </div>
 

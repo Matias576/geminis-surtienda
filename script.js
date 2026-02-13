@@ -43,6 +43,12 @@ function renderProducts(list) {
             const card = document.createElement('div');
             card.className = 'product-card';
             
+            card.onclick = (e) => {
+                if (!e.target.closest('button') && !e.target.closest('select')) {
+                    openProductDetail(product.id);
+                }
+            };
+            
             const fotos = product.image.split(',').map(img => img.trim()).filter(img => img !== "");
             let imagenesHTML = '';
             fotos.forEach(url => {
@@ -82,13 +88,9 @@ function renderProducts(list) {
                 <div class="info">
                     <h3>${product.title}</h3>
                     <p class="price">$${product.price}</p>
-                    <p class="product-description">${product.descripcion || ''}</p>
                     ${variantesHTML}
                     <div class="product-buttons">
                         <button class="btn-add" onclick="addToCart('${product.id}', event)">Agregar al Carrito</button>
-                        <button class="btn-query" onclick="queryWhatsApp('${product.title}')">
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" width="16" alt="WA"> Consultar
-                        </button>
                     </div>
                 </div>
             `;
@@ -101,6 +103,92 @@ function moveSlider(btn, direction) {
     const container = btn.parentElement.querySelector('.image-slider');
     const scrollAmount = container.clientWidth;
     container.scrollBy({ left: direction * scrollAmount, behavior: 'smooth' });
+}
+
+// --- FUNCIÓN DE DETALLE ACTUALIZADA CON ZOOM, MINIATURAS Y COMPARTIR ---
+function openProductDetail(id) {
+    const product = products.find(p => p.id === id);
+    if (!product) return;
+
+    document.getElementById('detail-title').innerText = product.title;
+    document.getElementById('detail-price').innerText = `$${product.price}`;
+    document.getElementById('detail-category').innerText = product.category;
+    document.getElementById('detail-description').innerText = product.descripcion || 'Sin descripción disponible.';
+    
+    const fotos = product.image.split(',').map(img => img.trim()).filter(img => img !== "");
+    const container = document.getElementById('detail-images-container');
+    
+    // Inyectar HTML para imagen principal (con zoom) y miniaturas
+    container.innerHTML = `
+        <div class="zoom-wrapper" id="zoom-container">
+            <img src="${fotos[0]}" class="detail-main-img" id="zoom-img">
+        </div>
+        <div class="thumbnail-container">
+            ${fotos.map((f, index) => `
+                <img src="${f}" 
+                     class="thumb-img ${index === 0 ? 'active' : ''}" 
+                     onclick="changeDetailImage(this, '${f}')"
+                     onerror="this.src='https://via.placeholder.com/60x60?text=Sin+Imagen'">
+            `).join('')}
+        </div>
+    `;
+
+    const zoomContainer = document.getElementById('zoom-container');
+    const img = document.getElementById('zoom-img');
+
+    // Lógica de Zoom
+    zoomContainer.onmousemove = (e) => {
+        const rect = zoomContainer.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        img.style.transformOrigin = `${(x / rect.width) * 100}% ${(y / rect.height) * 100}%`;
+        img.style.transform = "scale(2.5)";
+    };
+
+    zoomContainer.onmouseleave = () => {
+        img.style.transform = "scale(1)";
+        img.style.transformOrigin = "center center";
+    };
+
+    // Agregar botones: "Agregar al pedido" y "Compartir"
+    const actionContainer = document.getElementById('detail-actions');
+    actionContainer.innerHTML = `
+        <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 15px;">
+            <button class="btn-whatsapp" id="btn-add-detail">🛒 Agregar al pedido</button>
+            <button class="btn-share" id="btn-share-detail" style="background-color: #3498db; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer;">📤 Compartir Producto</button>
+        </div>
+    `;
+    
+    document.getElementById('btn-add-detail').onclick = () => {
+        addToCart(product.id);
+        closeProductDetail();
+        toggleCart();
+    };
+
+    // Lógica de Compartir
+    document.getElementById('btn-share-detail').onclick = () => {
+        const shareText = `¡Mira este producto en Geminis SurTienda!\n\n*${product.title}*\nPrecio: $${product.price}\n\nVer catálogo: ${window.location.href}`;
+        if (navigator.share) {
+            navigator.share({ title: product.title, text: shareText, url: window.location.href }).catch(console.error);
+        } else {
+            window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
+        }
+    };
+
+    document.getElementById('product-detail-modal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden'; 
+}
+
+// Función para cambiar imagen al clickear miniaturas
+function changeDetailImage(thumb, src) {
+    document.getElementById('zoom-img').src = src;
+    document.querySelectorAll('.thumb-img').forEach(t => t.classList.remove('active'));
+    thumb.classList.add('active');
+}
+
+function closeProductDetail() {
+    document.getElementById('product-detail-modal').classList.add('hidden');
+    document.body.style.overflow = 'auto';
 }
 
 function addToCart(id, event) {
@@ -138,9 +226,7 @@ function updateCartUI() {
         const precioLimpio = parseFloat(item.price.toString().replace(/[$.]/g, '').replace(',', '.')) || 0;
         total += precioLimpio;
         const li = document.createElement('li');
-        li.style.display = "flex";
-        li.style.justifyContent = "space-between";
-        li.style.marginBottom = "10px";
+        li.style.display = "flex"; li.style.justifyContent = "space-between"; li.style.marginBottom = "10px";
         li.innerHTML = `<span>${item.tituloConVariante}</span><span>$${precioLimpio.toLocaleString('es-AR')}</span>`;
         cartItems.appendChild(li);
     });
@@ -156,8 +242,7 @@ function toggleCart() {
 function emptyCart() {
     if (cart.length === 0) return;
     if (confirm("¿Estás seguro de que quieres vaciar el carrito?")) {
-        cart = [];
-        updateCartUI();
+        cart = []; updateCartUI();
         setTimeout(() => toggleCart(), 500);
     }
 }
@@ -260,8 +345,3 @@ window.onscroll = function() {
         }
     }
 };
-
-function queryWhatsApp(productTitle) {
-    const mensaje = `Hola *Geminis SurTienda*! Me gustaría consultar por este producto: *${productTitle}*`;
-    window.open(`https://wa.me/${MI_WHATSAPP}?text=${encodeURIComponent(mensaje)}`, '_blank');
-}
