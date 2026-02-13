@@ -116,13 +116,38 @@ function openProductDetail(id) {
             </div>
         </div>`;
 
+    // --- MODIFICACIÓN: Mostrar imagen principal y miniaturas ---
     const fotos = product.image.split(',').map(img => img.trim());
-    document.getElementById('detail-images-container').innerHTML = `<img src="${fotos[0]}" style="width:100%; border-radius:15px 15px 0 0;">`;
+    // Imagen principal
+    let mainImgHTML = `<img id="main-detail-img" src="${fotos[0]}" class="detail-main-img" onerror="this.src='https://via.placeholder.com/300'">`;
+    
+    // Miniaturas (solo se muestran si hay más de 1 imagen)
+    let thumbsHTML = '';
+    if (fotos.length > 1) {
+        thumbsHTML = `<div class="thumbnail-container">` +
+            fotos.map((img, index) => 
+                `<img src="${img}" class="thumb-img ${index === 0 ? 'active' : ''}" onclick="changeModalImage('${img}', this)" onerror="this.src='https://via.placeholder.com/300'">`
+            ).join('') + 
+        `</div>`;
+    }
+
+    // Inyectamos todo en el contenedor
+    document.getElementById('detail-images-container').innerHTML = mainImgHTML + thumbsHTML;
 
     modal.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
     window.history.pushState({ modalOpen: true }, "");
 }
+
+// NUEVA FUNCIÓN: Permite cambiar la imagen principal al hacer clic en las miniaturas
+window.changeModalImage = function(src, element) {
+    document.getElementById('main-detail-img').src = src;
+    
+    // Actualiza el borde de la miniatura seleccionada
+    const thumbs = element.parentElement.querySelectorAll('.thumb-img');
+    thumbs.forEach(thumb => thumb.classList.remove('active'));
+    element.classList.add('active');
+};
 
 function closeProductDetail() {
     document.getElementById('product-detail-modal').classList.add('hidden');
