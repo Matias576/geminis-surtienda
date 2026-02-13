@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geminis SurTienda | Catálogo Oficial</title>
+    <link rel="icon" type="image/png" href="https://i.postimg.cc/FK8g728L/1000721739.jpg">
+    <link rel="apple-touch-icon" href="https://i.postimg.cc/FK8g728L/1000721739.jpg">
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <button id="dark-mode-toggle" class="dark-mode-btn">
+        <span id="theme-icon">🌙</span>
+    </button>
+
+    <button id="btn-scroll-top" class="scroll-top-btn hidden" onclick="scrollToTop()">
+        ↑
+    </button>
+
+    <header>
+        <div class="logo">Geminis SurTienda</div>
+        <div class="cart-icon" onclick="toggleCart()">
+            🛒 <span id="cart-count">0</span>
+        </div>
+    </header>
+
+    <div class="search-container">
+        <input type="text" id="product-search" placeholder="Buscar productos..." onkeyup="searchProducts()">
+    </div>
+
+    <nav id="categories">
+        <button onclick="filterProducts('todo')">Todo</button>
+        <button onclick="filterProducts('Futbol')">Fútbol</button>
+        <button onclick="filterProducts('Ropa Femenina')">Ropa femenina</button>
+        <button onclick="filterProducts('Ropa Masculina')">Ropa masculina</button>
+        <button onclick="filterProducts('Ropa interior hombre')">Ropa interior hombre</button>
+        <button onclick="filterProducts('Calzado Femenino')">Calzado femenino</button>
+        <button onclick="filterProducts('Calzado Unisex')">Calzado unisex</button>
+        <button onclick="filterProducts('Lenceria')">Lencería</button>
+    </nav>
+
+    <main id="product-grid"></main>
+
+    <section id="contacto" class="contact-section">
+        <h2>¿Tienes alguna duda?</h2>
+        <form id="whatsapp-form">
+            <input type="text" id="nombre-contacto" placeholder="Tu Nombre" required>
+            <input type="text" id="asunto-contacto" placeholder="¿Por qué producto consultas?" required>
+            <textarea id="mensaje-contacto" placeholder="Escribe tu mensaje..." rows="4" required></textarea>
+            <button type="submit" class="btn-whatsapp">Enviar consulta por WhatsApp</button>
+        </form>
+    </section>
+
+    <div id="cart-modal" class="hidden">
+        <div class="cart-content">
+            <h3>Tu Pedido en Geminis SurTienda</h3>
+            <ul id="cart-items"></ul>
+            <div class="cart-footer">
+                <p>Total: $<span id="cart-total">0</span></p>
+                <button class="btn-empty" onclick="emptyCart()">🗑️ Vaciar Carrito</button>
+            </div>
+            <button class="btn-whatsapp" onclick="checkout()">Enviar pedido por WhatsApp</button>
+            <button class="btn-close" onclick="toggleCart()">Seguir viendo</button>
+        </div>
+    </div>
+
+    <div id="welcome-modal" class="welcome-overlay hidden">
+        <div class="welcome-content">
+            <button class="close-welcome" onclick="closeWelcome()">&times;</button>
+            <div class="welcome-body">
+                <span class="welcome-icon">👋</span>
+                <h2>¡Hola! Bienvenido a Geminis SurTienda</h2>
+                <p>Explora nuestro catálogo y arma tu pedido. <br> 
+                Al terminar, envíanos el carrito por WhatsApp para coordinar el pago y el envío.</p>
+            </div>
+            <button class="btn-start" onclick="closeWelcome()">¡Empezar a comprar!</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
