@@ -107,7 +107,7 @@ function renderProducts(list) {
     });
 }
 
-// --- DETALLE, ZOOM Y COMPARTIR ---
+// --- DETALLE, ZOOM Y CIERRE MEJORADO ---
 function openProductDetail(id) {
     const product = products.find(p => p.id === id);
     if (!product) return;
@@ -130,19 +130,7 @@ function openProductDetail(id) {
         </div>
     `;
 
-    const zoomContainer = document.getElementById('zoom-container');
-    const zoomImg = document.getElementById('zoom-img');
-    if (window.innerWidth > 768) {
-        zoomContainer.onmousemove = (e) => {
-            const { left, top, width, height } = zoomContainer.getBoundingClientRect();
-            const x = ((e.pageX - left - window.scrollX) / width) * 100;
-            const y = ((e.pageY - top - window.scrollY) / height) * 100;
-            zoomImg.style.transformOrigin = `${x}% ${y}%`;
-            zoomImg.style.transform = "scale(2.5)";
-        };
-        zoomContainer.onmouseleave = () => zoomImg.style.transform = "scale(1)";
-    }
-
+    // Botones de acción
     const actionContainer = document.getElementById('detail-actions');
     actionContainer.innerHTML = `
         <div class="detail-actions-grid">
@@ -168,6 +156,16 @@ function openProductDetail(id) {
 
     modal.classList.remove('hidden');
     document.body.style.overflow = 'hidden'; 
+
+    // CERRAR AL TOCAR AFUERA (Para celulares)
+    modal.onclick = (e) => {
+        if (e.target === modal) closeProductDetail();
+    };
+}
+
+function closeProductDetail() {
+    document.getElementById('product-detail-modal').classList.add('hidden');
+    document.body.style.overflow = 'auto';
 }
 
 // --- MODO OSCURO ---
@@ -211,32 +209,35 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // ESTILOS DE EMERGENCIA PARA CIERRE EN CELULARES
     const style = document.createElement('style');
     style.innerHTML = `
-        .detail-actions-grid { display: grid; gap: 10px; margin-top: 20px; }
-        .btn-add-detail { background: #000; color: #fff; padding: 15px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; }
-        .btn-consultar { background: #25D366; color: #fff; padding: 15px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; }
-        .btn-share-detail { background: #3498db; color: #fff; padding: 15px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; }
-        .btn-empty { background: #e74c3c; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; width: 100%; margin-bottom: 10px; font-weight: bold; }
+        #product-detail-modal { background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; }
+        .detail-content { position: relative; max-height: 90vh; overflow-y: auto; border-radius: 15px; }
+        .close-detail { 
+            position: fixed; top: 15px; right: 15px; 
+            background: #ff4757; color: white; 
+            width: 45px; height: 45px; border-radius: 50%; 
+            font-size: 28px; border: 2px solid white; 
+            z-index: 9999; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+        }
+        .detail-actions-grid { display: grid; gap: 10px; margin-top: 20px; padding-bottom: 20px; }
+        .btn-add-detail { background: #000; color: #fff; padding: 15px; border-radius: 10px; border: none; font-weight: bold; }
+        .btn-consultar { background: #25D366; color: #fff; padding: 15px; border-radius: 10px; border: none; font-weight: bold; }
+        .btn-share-detail { background: #3498db; color: #fff; padding: 15px; border-radius: 10px; border: none; font-weight: bold; }
         #categories button span { margin-right: 5px; }
-        [data-theme="dark"] .btn-add-detail { background: #fff; color: #000; }
-        .scroll-top-btn { transition: opacity 0.3s ease, visibility 0.3s; }
-        .scroll-top-btn.hidden { opacity: 0; visibility: hidden; display: flex !important; }
+        .scroll-top-btn.hidden { opacity: 0; visibility: hidden; }
     `;
     document.head.appendChild(style);
 });
 
 // --- FUNCIONES GLOBALES ---
-
-// ESTA FUNCIÓN ES LA QUE HACÍA FALTA
 window.onscroll = () => {
     const btnScroll = document.getElementById("btn-scroll-top");
     if (btnScroll) {
-        if (window.scrollY > 300) {
-            btnScroll.classList.remove("hidden");
-        } else {
-            btnScroll.classList.add("hidden");
-        }
+        if (window.scrollY > 300) btnScroll.classList.remove("hidden");
+        else btnScroll.classList.add("hidden");
     }
 };
 
@@ -248,7 +249,6 @@ function setupCategoryIcons() {
     });
 }
 function toggleCart() { document.getElementById('cart-modal').classList.toggle('hidden'); }
-function closeProductDetail() { document.getElementById('product-detail-modal').classList.add('hidden'); document.body.style.overflow = 'auto'; }
 function changeDetailImage(thumb, src) { document.getElementById('zoom-img').src = src; document.querySelectorAll('.thumb-img').forEach(t => t.classList.remove('active')); thumb.classList.add('active'); }
 function moveSlider(btn, dir) { const c = btn.parentElement.querySelector('.image-slider'); c.scrollBy({ left: dir * c.clientWidth, behavior: 'smooth' }); }
 function filterProducts(cat) { 
