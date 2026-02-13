@@ -76,12 +76,24 @@ function renderProducts(list) {
     });
 }
 
-// --- VENTANA EMERGENTE (DETALLE) ---
+// --- VENTANA EMERGENTE (DETALLE MEJORADO) ---
 function openProductDetail(id) {
     const product = products.find(p => p.id === id);
     if (!product) return;
 
     const modal = document.getElementById('product-detail-modal');
+
+    // AQUÍ AGREGO LOS TALLES/VARIANTES PARA EL CELULAR EN EL MODAL
+    let variantesHTMLModal = '';
+    if (product.variantes) {
+        const opciones = product.variantes.split(',');
+        variantesHTMLModal = `<div style="margin: 10px 0;">
+            <label style="font-weight:bold; font-size:0.9rem;">Seleccionar Variante/Talle:</label>
+            <select id="modal-select-${product.id}" class="select-variante" style="margin-top:5px; border:2px solid var(--border-color);">` + 
+            opciones.map(opt => `<option value="${opt.trim()}">${opt.trim()}</option>`).join('') + 
+            `</select></div>`;
+    }
+
     modal.innerHTML = `
         <div class="close-overlay" onclick="closeProductDetail()"></div>
         <div class="detail-content">
@@ -91,10 +103,15 @@ function openProductDetail(id) {
                 <h2>${product.title}</h2>
                 <p><b>Categoría:</b> ${product.category}</p>
                 <p class="price" style="font-size:1.5rem; color:var(--primary-color);">$${product.price}</p>
-                <p>${product.descripcion || ''}</p>
+                
+                ${variantesHTMLModal}
+
+                <p style="margin-top:15px;">${product.descripcion || ''}</p>
+                
                 <div class="detail-actions-grid" style="display:grid; gap:10px; margin-top:20px;">
-                    <button class="btn-add-detail" onclick="addToCart('${product.id}'); closeProductDetail(); toggleCart();" style="background:var(--text-color); color:var(--bg-color); padding:15px; border-radius:10px; border:none; font-weight:bold;">🛒 Agregar al Carrito</button>
+                    <button class="btn-add-detail" onclick="addToCartFromModal('${product.id}')" style="background:var(--text-color); color:var(--bg-color); padding:15px; border-radius:10px; border:none; font-weight:bold;">🛒 Agregar al Carrito</button>
                     <button class="btn-consultar" onclick="consultarWhatsApp('${product.title}')" style="background:#25D366; color:white; padding:15px; border-radius:10px; border:none; font-weight:bold;">💬 Consultar por WhatsApp</button>
+                    <button class="btn-share" onclick="compartirProducto('${product.title}')" style="background:#3498db; color:white; padding:15px; border-radius:10px; border:none; font-weight:bold;">📤 Compartir Producto</button>
                 </div>
             </div>
         </div>`;
@@ -112,10 +129,39 @@ function closeProductDetail() {
     document.body.style.overflow = 'auto';
 }
 
-function consultarWhatsApp(titulo) {
-    const msg = `Hola! Me interesa este producto: *${titulo}*. ¿Tienen stock?`;
-    window.open(`https://wa.me/${MI_WHATSAPP}?text=${encodeURIComponent(msg)}`, '_blank');
+// --- FUNCIONES WHATSAPP Y COMPARTIR SEGURAS ---
+function abrirWhatsAppSeguro(mensaje) {
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const waUrl = `https://wa.me/${MI_WHATSAPP}?text=${encodeURIComponent(mensaje)}`;
+    if (isMobile) {
+        window.location.href = waUrl; // En celular evita bloqueos de ventanas emergentes
+    } else {
+        window.open(waUrl, '_blank'); // En PC abre pestaña nueva
+    }
 }
+
+function consultarWhatsApp(titulo) {
+    abrirWhatsAppSeguro(`Hola! Me interesa este producto: *${titulo}*. ¿Tienen stock?`);
+}
+
+function compartirProducto(titulo) {
+    const texto = `Mira este producto en Geminis SurTienda: *${titulo}*`;
+    const url = window.location.href;
+    
+    if (navigator.share) {
+        // Funciona en Celulares
+        navigator.share({ title: titulo, text: texto, url: url }).catch(err => console.log('Error al compartir', err));
+    } else {
+        // Alternativa si estás en PC (Abre WhatsApp Web)
+        abrirWhatsAppSeguro(texto + " " + url);
+    }
+}
+
+// --- BUSCADOR ---
+window.searchProducts = function() {
+    const term = document.getElementById('product-search').value.toLowerCase();
+    renderProducts(products.filter(p => p.title.toLowerCase().includes(term) || (p.category && p.category.toLowerCase().includes(term))));
+};
 
 // --- MODO OSCURO ---
 function applyTheme(theme) {
@@ -141,6 +187,19 @@ function addToCart(id, event) {
     }
 }
 
+// Función especial para agregar desde la ventana emergente leyendo el talle de ahí
+function addToCartFromModal(id) {
+    const product = products.find(p => p.id === id);
+    if(product) {
+        const select = document.getElementById(`modal-select-${id}`);
+        const variante = select ? select.value : null;
+        cart.push({...product, tituloFinal: variante ? `${product.title} (Talle: ${variante})` : product.title});
+        updateCartUI();
+        closeProductDetail();
+        toggleCart();
+    }
+}
+
 function updateCartUI() {
     document.getElementById('cart-count').innerText = cart.length;
     const items = document.getElementById('cart-items');
@@ -153,15 +212,26 @@ function updateCartUI() {
     document.getElementById('cart-total').innerText = total.toLocaleString('es-AR');
 }
 
-function emptyCart() {
-    if (confirm("¿Vaciar el carrito?")) { cart = []; updateCartUI(); }
-}
+window.emptyCart = function() {
+    if (cart.length === 0) return alert("El carrito ya está vacío.");
+    if (confirm("¿Seguro que deseas vaciar el carrito?")) { 
+        cart = []; 
+        updateCartUI(); 
+    }
+};
 
-function checkout() {
-    if(cart.length === 0) return;
-    let msg = "Hola! Mi pedido:%0A" + cart.map(i => `- ${i.tituloFinal} ($${i.price})`).join('%0A');
-    window.open(`https://wa.me/${MI_WHATSAPP}?text=${msg}`, '_blank');
-}
+window.checkout = function() {
+    if(cart.length === 0) return alert("Tu carrito está vacío.");
+    let msg = "Hola! Mi pedido en Geminis SurTienda:%0A%0A";
+    let total = 0;
+    cart.forEach(i => {
+        msg += `• ${i.tituloFinal} ($${i.price})%0A`;
+        total += parseFloat(i.price.replace(/[$.]/g, '').replace(',', '.')) || 0;
+    });
+    msg += `%0A*Total: $${total.toLocaleString('es-AR')}*`;
+    
+    abrirWhatsAppSeguro(msg);
+};
 
 // --- INICIALIZACIÓN ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -177,14 +247,19 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('theme', newTheme);
     };
 
-    // Formulario de abajo
+    // Formulario de Contacto (Abajo de todo)
     const contactForm = document.getElementById('whatsapp-form');
-    if (contactForm) contactForm.onsubmit = (e) => {
-        e.preventDefault();
-        const nom = document.getElementById('nombre-contacto').value;
-        const msg = document.getElementById('mensaje-contacto').value;
-        window.open(`https://wa.me/${MI_WHATSAPP}?text=Hola, soy ${nom}. ${msg}`, '_blank');
-    };
+    if (contactForm) {
+        contactForm.onsubmit = (e) => {
+            e.preventDefault();
+            const nom = document.getElementById('nombre-contacto').value;
+            const asu = document.getElementById('asunto-contacto').value;
+            const msg = document.getElementById('mensaje-contacto').value;
+            
+            const textoFinal = `Hola Geminis SurTienda! Soy ${nom}.%0A*Consulta por:* ${asu}%0A*Mensaje:* ${msg}`;
+            abrirWhatsAppSeguro(textoFinal);
+        };
+    }
 
     // Estilos necesarios para la flecha y el modal
     const style = document.createElement('style');
@@ -207,15 +282,16 @@ window.onscroll = () => {
 
 window.onpopstate = () => closeProductDetail();
 
-function setupCategoryIcons() {
+window.setupCategoryIcons = function() {
     document.querySelectorAll('#categories button').forEach(btn => {
         const icon = CATEGORY_ICONS[btn.innerText.toLowerCase().trim()] || "📦";
         btn.innerHTML = `<span>${icon}</span> ${btn.innerText}`;
     });
-}
-function toggleCart() { document.getElementById('cart-modal').classList.toggle('hidden'); }
-function moveSlider(btn, dir) { const s = btn.parentElement.querySelector('.image-slider'); s.scrollBy({ left: dir * 200, behavior: 'smooth' }); }
-function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
-function filterProducts(cat) { 
+};
+
+window.toggleCart = function() { document.getElementById('cart-modal').classList.toggle('hidden'); };
+window.moveSlider = function(btn, dir) { const s = btn.parentElement.querySelector('.image-slider'); s.scrollBy({ left: dir * 200, behavior: 'smooth' }); };
+window.scrollToTop = function() { window.scrollTo({ top: 0, behavior: 'smooth' }); };
+window.filterProducts = function(cat) { 
     renderProducts(cat === 'todo' ? products : products.filter(p => p.category?.toLowerCase() === cat.toLowerCase())); 
-}
+};
