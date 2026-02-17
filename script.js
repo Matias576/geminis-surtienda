@@ -7,7 +7,7 @@ let cart = [];
 const CATEGORY_ICONS = {
     "todo": "🏠", "fútbol": "⚽", "ropa femenina": "👗", "ropa masculina": "👕",
     "ropa interior hombre": "🩲", "calzado femenino": "👠", "calzado unisex": "👟",
-    "lencería": "👙", "default": "📦" , "zapatilla femenina": "👟", "pantalones hombre": "👖", "pantalones mujer": "👖"
+    "lencería": "👙", "default": "📦" , "zapatilla femenina": "👟", "pantalones hombre": "👖", "pantalones mujer": "👖", "calzado niños": "👟"
 };
 
 // --- CARGA DE DATOS ---
